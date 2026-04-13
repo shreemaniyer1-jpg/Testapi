@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Aethelon Core - Connectivity Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #050505; color: #e5e5e5; font-family: monospace; }
+        .terminal { border: 1px solid #333; background: #000; }
+    </style>
+</head>
+<body class="p-10">
+    <div class="max-w-2xl mx-auto space-y-6">
+        <h1 class="text-xl tracking-widest uppercase text-emerald-500">Aethelon Node Terminal</h1>
+        
+        <div class="terminal p-6 rounded-lg space-y-4">
+            <div>
+                <label class="block text-[10px] text-stone-500 uppercase mb-1">Target Endpoint</label>
+                <input id="targetUrl" type="text" value="https://v0-aethelonapi.vercel.app/api/v1/chat" class="w-full bg-stone-900 border border-stone-800 p-2 text-sm outline-none">
+            </div>
+
+            <div>
+                <label class="block text-[10px] text-stone-500 uppercase mb-1">Proxy Access Key</label>
+                <input id="targetKey" type="text" placeholder="aeth_1234567890" value="aeth_7vX2p9Lq1m" class="w-full bg-stone-900 border border-stone-800 p-2 text-sm outline-none">
+            </div>
+
+            <div>
+                <label class="block text-[10px] text-stone-500 uppercase mb-1">Model Node</label>
+                <select id="targetModel" class="w-full bg-stone-900 border border-stone-800 p-2 text-sm outline-none">
+                    <option value="aethelon-fast-3.1">aethelon-fast-3.1 (Llama 3.1 8B)</option>
+                    <option value="aethelon-coder-3.2">aethelon-coder-3.2 (GPT-OSS 120B)</option>
+                    <option value="aethelon-thinking-3.2">aethelon-thinking-3.2 (Llama 3.3 70B)</option>
+                </select>
+            </div>
+
+            <button onclick="runDiagnostic()" id="runBtn" class="w-full bg-emerald-600 text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-emerald-500 transition-all">Execute Diagnostic</button>
+        </div>
+
+        <div id="output" class="hidden terminal p-6 rounded-lg border-emerald-900/30">
+            <p class="text-[10px] text-stone-500 uppercase mb-2">Response Stream</p>
+            <div id="responseText" class="text-sm leading-relaxed"></div>
+            <div id="meta" class="mt-4 pt-4 border-t border-stone-800 text-[10px] text-stone-500 flex justify-between"></div>
+        </div>
+    </div>
+
+    <script>
+        async function runDiagnostic() {
+            const btn = document.getElementById('runBtn');
+            const output = document.getElementById('output');
+            const responseText = document.getElementById('responseText');
+            const meta = document.getElementById('meta');
+
+            btn.disabled = true;
+            btn.innerText = "CONNECTING...";
+            output.classList.remove('hidden');
+            responseText.innerText = "Awaiting response from Aethelon...";
+
+            try {
+                const res = await fetch(document.getElementById('targetUrl').value, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + document.getElementById('targetKey').value,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: document.getElementById('targetModel').value,
+                        messages: [{ role: "user", content: "Identify yourself and state your origin." }]
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || "Connection Refused");
+
+                responseText.innerText = data.choices[0].message.content;
+                meta.innerHTML = `<span>ID: ${data.id}</span><span>MODEL: ${data.model}</span>`;
+                
+            } catch (err) {
+                responseText.innerHTML = `<span class="text-red-500">ERROR: ${err.message}</span>`;
+                meta.innerText = "Check Vercel Environment Variables and CORS/Origin settings.";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Execute Diagnostic";
+            }
+        }
+    </script>
+</body>
+</html>
