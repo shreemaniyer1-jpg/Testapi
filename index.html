@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aethelon API Client</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0a0a0a; color: #fafafa; min-height: 100vh; padding: 2rem; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: #a1a1aa; }
+    input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid #27272a; border-radius: 0.5rem; background: #18181b; color: #fafafa; font-size: 1rem; }
+    textarea { min-height: 120px; resize: vertical; }
+    button { width: 100%; padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-size: 1rem; cursor: pointer; margin-top: 1rem; }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #1e3a5f; cursor: not-allowed; }
+    .response { margin-top: 2rem; padding: 1rem; background: #18181b; border: 1px solid #27272a; border-radius: 0.5rem; }
+    .response h2 { font-size: 1rem; margin-bottom: 1rem; color: #a1a1aa; }
+    .response pre { white-space: pre-wrap; word-break: break-word; font-family: monospace; font-size: 0.875rem; line-height: 1.6; }
+    .error { color: #ef4444; }
+    .meta { font-size: 0.75rem; color: #71717a; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #27272a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Aethelon API Client</h1>
+    
+    <div class="form-group">
+      <label for="apiUrl">API URL</label>
+      <input type="text" id="apiUrl" value="http://v0-apiaethelon/v1/chat" placeholder="https://your-domain.vercel.app/api/v1/chat">
+    </div>
+    
+    <div class="form-group">
+      <label for="model">Model</label>
+      <select id="model">
+        <option value="aethelon-fast-3.1">aethelon-fast-3.1 (Fast responses)</option>
+        <option value="aethelon-coder-3.2">aethelon-coder-3.2 (Code generation)</option>
+        <option value="aethelon-thinking-3.2">aethelon-thinking-3.2 (Complex reasoning)</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="message">Message</label>
+      <textarea id="message" placeholder="Enter your message here...">Hello, who are you?</textarea>
+    </div>
+    
+    <button id="sendBtn" onclick="sendRequest()">Send Request</button>
+    
+    <div class="response" id="responseBox" style="display: none;">
+      <h2>Response</h2>
+      <pre id="responseContent"></pre>
+      <div class="meta" id="responseMeta"></div>
+    </div>
+  </div>
+
+  <script>
+    async function sendRequest() {
+      const apiUrl = document.getElementById('apiUrl').value;
+      const model = document.getElementById('model').value;
+      const message = document.getElementById('message').value;
+      const btn = document.getElementById('sendBtn');
+      const responseBox = document.getElementById('responseBox');
+      const responseContent = document.getElementById('responseContent');
+      const responseMeta = document.getElementById('responseMeta');
+
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      responseContent.className = '';
+
+      const requestBody = {
+        model: model,
+        messages: [
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 1024
+      };
+
+      const startTime = Date.now();
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+        const elapsed = Date.now() - startTime;
+
+        responseBox.style.display = 'block';
+
+        if (!response.ok) {
+          responseContent.className = 'error';
+          responseContent.textContent = `Error ${response.status}: ${data.error?.message || JSON.stringify(data, null, 2)}`;
+          responseMeta.textContent = '';
+        } else {
+          const assistantMessage = data.choices?.[0]?.message?.content || 'No content';
+          responseContent.textContent = assistantMessage;
+          
+          responseMeta.innerHTML = `
+            <strong>Model:</strong> ${data.model} | 
+            <strong>ID:</strong> ${data.id} | 
+            <strong>Tokens:</strong> ${data.usage?.total_tokens || 'N/A'} | 
+            <strong>Latency:</strong> ${elapsed}ms
+          `;
+        }
+      } catch (err) {
+        responseBox.style.display = 'block';
+        responseContent.className = 'error';
+        responseContent.textContent = `Network error: ${err.message}`;
+        responseMeta.textContent = '';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Request';
+      }
+    }
+  </script>
+</body>
+</html>
